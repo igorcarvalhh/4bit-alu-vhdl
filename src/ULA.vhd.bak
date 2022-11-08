@@ -1,0 +1,66 @@
+LIBRARY ieee;
+USE ieee.std_logic_1164.ALL;
+
+ENTITY ULA IS
+
+    PORT (
+        a, b : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+        func : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+        s : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+        carry_out, overflow, sig, zero : OUT STD_LOGIC
+    );
+
+END ULA;
+
+ARCHITECTURE structural OF ULA IS
+
+    COMPONENT logicUnit
+        PORT (
+            a, b : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+            mode : IN STD_LOGIC;
+            s : OUT STD_LOGIC_VECTOR(3 DOWNTO 0)
+        );
+    END COMPONENT;
+
+    COMPONENT arithmeticUnit
+        PORT (
+            a, b : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+            b_control : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
+            a_control, mode_control : IN STD_LOGIC;
+            s : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+            carry_out, overflow : OUT STD_LOGIC
+        );
+    END COMPONENT;
+
+    COMPONENT decoderUnit
+        PORT (
+            func : IN STD_LOGIC_VECTOR(2 DOWNTO 0);
+            b_ctrl : OUT STD_LOGIC_VECTOR (1 DOWNTO 0);
+            a_ctrl, arithmetic_ctrl, logic_ctrl, mux_ctrl : OUT STD_LOGIC
+        );
+    END COMPONENT;
+
+    SIGNAL carry, ovf : STD_LOGIC;
+    SIGNAL b_ctrl : STD_LOGIC_VECTOR(1 DOWNTO 0);
+    SIGNAL a_ctrl, arithmetic_ctrl, logic_ctrl, mux_ctrl : STD_LOGIC;
+    SIGNAL saida_a : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL saida_l : STD_LOGIC_VECTOR(3 DOWNTO 0);
+    SIGNAL saida : STD_LOGIC_VECTOR(3 DOWNTO 0);
+
+BEGIN
+
+    controlUnit : decoderUnit PORT MAP(func, b_ctrl, a_ctrl, arithmetic_ctrl, logic_ctrl, mux_ctrl);
+    logicUnit : logicUnit PORT MAP(a, b, logic_ctrl, saida_l);
+    arithmeticUnit : arithmeticUnit PORT MAP(a, b, b_ctrl, a_ctrl, arithmetic_ctrl, saida_a, carry, ovf);
+
+    WITH mux_ctrl SELECT saida <=
+        saida_a WHEN '0',
+        saida_l WHEN OTHERS;
+
+    s <= saida;
+    carry_out <= (NOT mux_ctrl) AND carry;
+    overflow <= (NOT mux_ctrl) AND ovf;
+    sig <= saida(3);
+    zero <= NOT (saida(0) OR saida(1) OR saida(2) OR saida(3));
+
+END structural;
